@@ -921,12 +921,13 @@ class MARCModel < ASpaceExport::ExportModel
       unless !s_index
 
         # find field and append a period if there isn't one there already
+        # Trico modified this so that it adds a period to the a and b
         unless ['.', ')', ',', '-'].include?(name_fields[s_index][1][-1])
-          name_fields[-1][1] << "."
+          name_fields[s_index][1] << "."
         end
       end
     end
-
+    
     apply_terminal_punctuation(name_fields)
 
     return name_fields
