@@ -873,8 +873,8 @@ class MARCModel < ASpaceExport::ExportModel
 
   #For corporation types
   # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
+  # TriCo changed some of this to accomodate n, d, and c subfields
   def handle_agent_corporate_punctuation(name_fields)
-    name_fields.sort! {|a, b| a[0][0] <=> b[0][0]}
 
     # The value of subfield g must be enclosed in parentheses.
     g_index = name_fields.find_index {|a| a[0] == "g"}
@@ -883,16 +883,68 @@ class MARCModel < ASpaceExport::ExportModel
     end
 
     # The value of subfield n must be enclosed in parentheses.
+    # n_index = name_fields.find_index {|a| a[0] == "n"}
+    # unless !n_index
+    #   name_fields[n_index][1] = "(#{name_fields[n_index][1]})"
+    # end
+
+    # Trico adding stuff to handle d, c, and n subfields
+    d_index = name_fields.find_index { |a| a[0] == "d" }
+    c_index = name_fields.find_index { |a| a[0] == "c" }
     n_index = name_fields.find_index {|a| a[0] == "n"}
-    unless !n_index
+
+    # logic for dealing with different subfield combinations and their punctuation
+    # n, c, d exist
+    if !n_index.nil? && !c_index.nil? && !d_index.nil?
+      name_fields[n_index][1] = "(#{name_fields[n_index][1]} : "
+      name_fields[d_index][1] = "#{name_fields[d_index][1]} : "
+      name_fields[c_index][1] = "#{name_fields[c_index][1]})"
+    # just n and c exist
+    elsif !n_index.nil? && !c_index.nil? 
+      name_fields[n_index][1] = "(#{name_fields[n_index][1]} : "
+      name_fields[c_index][1] = "#{name_fields[c_index][1]})"
+    # just n and d exist
+    elsif !n_index.nil? && !d_index.nil?
+      name_fields[n_index][1] = "(#{name_fields[n_index][1]} : "
+      name_fields[d_index][1] = "#{name_fields[d_index][1]})"
+    # just n exists
+    elsif !n_index.nil?
       name_fields[n_index][1] = "(#{name_fields[n_index][1]})"
+    # just c and d exists
+    elsif !c_index.nil? && !d_index.nil?
+      name_fields[d_index][1] = "(#{name_fields[d_index][1]} : "
+      name_fields[c_index][1] = "#{name_fields[c_index][1]})"
+    # just c exists
+    elsif !c_index.nil?
+      name_fields[c_index][1] = "(#{name_fields[c_index][1]})"
+    # just d exists
+    elsif !d_index.nil?
+      name_fields[d_index][1] = "(#{name_fields[d_index][1]})"
+    end
+
+    # if there are multiple locations, create repeatable c subfields
+    if !c_index.nil?
+      location_text = name_fields[c_index][1]
+      # multiple locations are separated by a semi-colon
+      if location_text.include?(";")
+        locations_array = location_text.split(";", -1)
+        # replace the first subfield c with first location in list
+        name_fields[c_index][1] = "#{locations_array[0]};"
+        # go through remaining locations and add more subfield c's to name_fields
+        index = 1
+        while index < locations_array.length-1
+          name_fields << ["c", "#{locations_array[index].lstrip};"]
+          index += 1
+        end
+        # the very last location does not need a semi-colon
+        name_fields << ["c", locations_array[-1].lstrip]
+      end
     end
 
     #If subfield $e is present, the value of the preceding subfield must end in a comma.
-    #If subfield $n is present, the value of the preceding subfield must end in a comma.
     #If subfield $g is present, the value of the preceding subfield must end in a comma.
     logger_sec = Logger.new(STDOUT)
-    ['e', 'n', 'g'].each do |subfield|
+    ['e', 'g'].each do |subfield|
       s_index = name_fields.find_index {|a| a[0] == subfield}
       
       logger_sec.info {"laurin test"}
@@ -999,6 +1051,8 @@ class MARCModel < ASpaceExport::ExportModel
     sub_name1    = name['subordinate_name_1'] rescue nil
     sub_name2    = name['subordinate_name_2'] rescue nil
     number       = name['number'] rescue nil
+    location     = name['location'] rescue nil
+    dates        = name['dates'] rescue nil
     qualifier    = name['qualifier'] rescue nil
 
     # 610s subfield b is repeatable and SubordinateName1 and SubordinateName2 should be separate subfield b’s
@@ -1022,9 +1076,11 @@ class MARCModel < ASpaceExport::ExportModel
       ['a', primary_name],
       ['b', subfield_b_1],
       ['b', subfield_b_2],
-      subfield_e,
       ['n', number],
-      ['g', qualifier]
+      ['d', dates],
+      ['c', location],
+      ['g', qualifier],
+      subfield_e
     ].compact.reject {|a| a[1].nil? || a[1].empty?}
     
     # TriCo hack for fixing a problem that was happening when an agent had roles of both creator and subject. For some reason a comma was being added to the last field in name_fields. I still have not figured out why the comma is being added. Here, I am simply chopping it off.
