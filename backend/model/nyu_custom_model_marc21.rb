@@ -882,12 +882,6 @@ class MARCModel < ASpaceExport::ExportModel
       name_fields[g_index][1] = "(#{name_fields[g_index][1]})"
     end
 
-    # The value of subfield n must be enclosed in parentheses.
-    # n_index = name_fields.find_index {|a| a[0] == "n"}
-    # unless !n_index
-    #   name_fields[n_index][1] = "(#{name_fields[n_index][1]})"
-    # end
-
     # Trico adding stuff to handle d, c, and n subfields
     d_index = name_fields.find_index { |a| a[0] == "d" }
     c_index = name_fields.find_index { |a| a[0] == "c" }
