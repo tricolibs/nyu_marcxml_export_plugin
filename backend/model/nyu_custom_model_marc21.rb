@@ -444,9 +444,16 @@ class MARCModel < ASpaceExport::ExportModel
       case creator['agent_type']
 
       when 'agent_corporate_entity'
-        code = '710'
-        ind1 = '2'
-        sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, creator)
+        #TriCo addition of 711
+        if creator['names'][0]['conference_meeting'] == true
+          code = '711'
+          ind1 = '2'
+          sfs = gather_agent_meeting_subfield_mappings(name, relator_sfs, creator)
+        else
+          code = '710'
+          ind1 = '2'
+          sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, creator)
+        end
 
       when 'agent_person'
         ind1  = name['name_order'] == 'direct' ? '0' : '1'
@@ -467,10 +474,12 @@ class MARCModel < ASpaceExport::ExportModel
  
 
   def handle_agents(linked_agents)
+    logger = Logger.new(STDOUT)
+    logger.info {"Linked Agents: #{linked_agents}"}
     handle_primary_creator(linked_agents)
     handle_other_creators(linked_agents)
 
-    logger = Logger.new(STDOUT)
+    
 
     subjects = linked_agents.select {|a| a['role'] == 'subject'}
     
@@ -984,6 +993,17 @@ class MARCModel < ASpaceExport::ExportModel
     d_index = name_fields.find_index { |a| a[0] == "d" }
     c_index = name_fields.find_index { |a| a[0] == "c" }
     n_index = name_fields.find_index {|a| a[0] == "n"}
+    e_index = name_fields.find_index { |a| a[0] == "e"}
+
+    # temporarily delete subfield e; we'll add it back on to the end later
+    
+    subfield_e = nil
+
+    if !e_index.nil?
+      subfield_e = name_fields[e_index]
+      name_fields.delete_at(e_index)
+    end
+
 
     # logic for dealing with different subfield combinations and their punctuation
     # n, c, d exist
@@ -1031,6 +1051,33 @@ class MARCModel < ASpaceExport::ExportModel
         # the very last location does not need a semi-colon
         name_fields << ["c", locations_array[-1].lstrip]
       end
+    
+    # add subfield_e back onto the end of the array
+    if !subfield_e.nil?
+      name_fields << subfield_e
+    end 
+
+    #If subfield $e is present, the value of the preceding subfield must end in a comma.
+    #If subfield $g is present, the value of the preceding subfield must end in a comma.
+    logger_sec = Logger.new(STDOUT)
+    ['e', 'g'].each do |subfield|
+      s_index = name_fields.find_index {|a| a[0] == subfield}
+      
+      logger_sec.info {"laurin test"}
+      logger_sec.info { subfield }
+      logger_sec.info { name_fields }
+
+      # check if $subfield is present
+
+      unless !s_index || s_index == 0
+        preceding_index = s_index - 1
+
+        # find preceding field and append a comma if there isn't one there already
+        unless name_fields[preceding_index][1][-1] == ","
+          name_fields[preceding_index][1] << ","
+        end
+      end
+    end
     end
 
     apply_terminal_punctuation(name_fields)
@@ -1106,7 +1153,7 @@ class MARCModel < ASpaceExport::ExportModel
     return name_fields
   end
   
-  # TriCo method for creating 611s, basically copied from 610 with additional fields
+  # TriCo method for creating 611s and 711s, basically copied from 610 with additional fields
   def gather_agent_meeting_subfield_mappings(name, role_info, agent, terms=nil)
     logger = Logger.new(STDOUT)
     subfield_e, subfield_4 = prepare_role_subfields(role_info)
@@ -1118,10 +1165,10 @@ class MARCModel < ASpaceExport::ExportModel
 
     name_fields = [
       ['a', primary_name],
-      subfield_e,
       ['n', number],
       ['d', dates],
       ['c', location],
+      subfield_e
       
     ].compact.reject {|a| a[1].nil? || a[1].empty?}
 
@@ -1147,7 +1194,7 @@ class MARCModel < ASpaceExport::ExportModel
     end
 
     name_fields = handle_agent_meeting_punctuation(name_fields)
-    name_fields.push(subfield_4) unless subfield_4.nil?
+    name_fields.push(subfield_4) unless subfield_e.nil?
 
     authority_id = find_authority_id(agent['names'])
     subfield_0 = authority_id ? [0, authority_id] : nil
