@@ -398,14 +398,22 @@ class MARCModel < ASpaceExport::ExportModel
     case creator['agent_type']
 
     when 'agent_corporate_entity'
-      code = '110'
-      ind1 = '2'
-      sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, creator)
+      #TriCo addition of 111
+      if creator['names'][0]['conference_meeting'] == true
+        code = '111'
+        ind1 = '2'
+        sfs = gather_agent_meeting_subfield_mappings(name, relator_sfs, creator)
+      else
+        code = '110'
+        ind1 = '2'
+        sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, creator)
+      end
 
     when 'agent_person'
       ind1  = name['name_order'] == 'direct' ? '0' : '1'
       code = '100'
       sfs = gather_agent_person_subfield_mappings(name, relator_sfs, creator)
+    
 
     when 'agent_family'
       code = '100'
