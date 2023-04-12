@@ -159,7 +159,7 @@ class MARCCustomFieldSerialize
   end 
   # TriCo method for adding testing 035 field
   def add_test_id
-    id = "ASpace-Test4"
+    id = "ASpace-Test8"
     add_035_tag(id)
   end
   # modified by TriCo to allow repeatable 035 fields
