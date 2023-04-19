@@ -1,5 +1,3 @@
-require 'logger'
-
 class MARCModel < ASpaceExport::ExportModel
   model_for :marc21
 
@@ -482,16 +480,12 @@ class MARCModel < ASpaceExport::ExportModel
  
 
   def handle_agents(linked_agents)
-    logger = Logger.new(STDOUT)
-    logger.info {"Linked Agents: #{linked_agents}"}
     handle_primary_creator(linked_agents)
     handle_other_creators(linked_agents)
 
     
 
     subjects = linked_agents.select {|a| a['role'] == 'subject'}
-    
-    logger.info { subjects }
 
     subjects.each_with_index do |link, i|
       next unless link["_resolved"]["publish"] || @include_unpublished
@@ -505,8 +499,6 @@ class MARCModel < ASpaceExport::ExportModel
       if link['relator']
         handle_relators(relator_sfs, link['relator'])
       end
-      
-      logger = Logger.new(STDOUT)
 
       case subject['agent_type']
       
@@ -521,7 +513,6 @@ class MARCModel < ASpaceExport::ExportModel
           ind1 = '2'
           sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, subject, terms)
         end
-        logger.info "610/611: name: #{name}, relators: #{relator_sfs}, subject: #{subject}, terms: #{terms}"
 
       when 'agent_person'
         ind1  = name['name_order'] == 'direct' ? '0' : '1'
@@ -704,9 +695,6 @@ class MARCModel < ASpaceExport::ExportModel
     # as long as it is not $0, $2, or $4 which don't receive
     # terminal punctuation.
     sub_store = name_fields.reject! {|x| [0, 2, 4].include?(x[0][0]) }
-    logger = Logger.new(STDOUT)
-    logger.info { "name fields before terminal punctuation "}
-    logger.info { name_fields }
     unless ['.', ')', ',', '-'].include?(name_fields[-1][1][-1])
       name_fields[-1][1] << "."
     end
@@ -806,9 +794,6 @@ class MARCModel < ASpaceExport::ExportModel
       ["g", qualifier]
     ].compact.reject {|a| a[1].nil? || a[1].empty?}
 
-    logger = Logger.new(STDOUT)
-    logger.info { "agent person name fields"}
-    logger.info { name_fields.concat }
     unless terms.nil?
       name_fields.concat handle_agent_terms(terms)
     end
@@ -826,8 +811,6 @@ class MARCModel < ASpaceExport::ExportModel
       end  
     end
 
-    logger.info {"chopped name_fields"}
-    logger.info {name_fields}
 
     name_fields = handle_agent_person_punctuation(name_fields)
     name_fields.push(subfield_4) unless subfield_4.nil?
@@ -959,13 +942,8 @@ class MARCModel < ASpaceExport::ExportModel
 
     #If subfield $e is present, the value of the preceding subfield must end in a comma.
     #If subfield $g is present, the value of the preceding subfield must end in a comma.
-    logger_sec = Logger.new(STDOUT)
     ['e', 'g'].each do |subfield|
       s_index = name_fields.find_index {|a| a[0] == subfield}
-      
-      logger_sec.info {"laurin test"}
-      logger_sec.info { subfield }
-      logger_sec.info { name_fields }
 
       # check if $subfield is present
 
@@ -1072,13 +1050,9 @@ class MARCModel < ASpaceExport::ExportModel
 
     #If subfield $e is present, the value of the preceding subfield must end in a comma.
     #If subfield $g is present, the value of the preceding subfield must end in a comma.
-    logger_sec = Logger.new(STDOUT)
+    
     ['e', 'g'].each do |subfield|
       s_index = name_fields.find_index {|a| a[0] == subfield}
-      
-      logger_sec.info {"laurin test"}
-      logger_sec.info { subfield }
-      logger_sec.info { name_fields }
 
       # check if $subfield is present
 
@@ -1099,7 +1073,6 @@ class MARCModel < ASpaceExport::ExportModel
   end
 
   def gather_agent_corporate_subfield_mappings(name, role_info, agent, terms=nil)
-    logger = Logger.new(STDOUT)
     subfield_e, subfield_4 = prepare_role_subfields(role_info)
     primary_name = name['primary_name'] rescue nil
     sub_name1    = name['subordinate_name_1'] rescue nil
@@ -1149,8 +1122,6 @@ class MARCModel < ASpaceExport::ExportModel
         end 
       end  
     end
-    
-    logger.info { name_fields }
 
     unless terms.nil?
       name_fields.concat handle_agent_terms(terms)
@@ -1168,7 +1139,6 @@ class MARCModel < ASpaceExport::ExportModel
   
   # TriCo method for creating 611s and 711s, basically copied from 610 with additional fields
   def gather_agent_meeting_subfield_mappings(name, role_info, agent, terms=nil)
-    logger = Logger.new(STDOUT)
     subfield_e, subfield_4 = prepare_role_subfields(role_info)
     primary_name = name['primary_name'] rescue nil
     number       = name['number'] rescue nil
@@ -1199,8 +1169,6 @@ class MARCModel < ASpaceExport::ExportModel
       end  
     end
     
-    logger.info {"****name fields****"}
-    logger.info { name_fields }
 
     unless terms.nil?
       name_fields.concat handle_agent_terms(terms)
