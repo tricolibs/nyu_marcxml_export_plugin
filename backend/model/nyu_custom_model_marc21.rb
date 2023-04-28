@@ -607,14 +607,20 @@ class MARCModel < ASpaceExport::ExportModel
         text = prefix ? "#{prefix}: " : ""
         text += ASpaceExport::Utils.extract_note_text(note, @include_unpublished, true)
 
-        # only create a tag if there is text to show (e.g., marked published or exporting unpublished)
+        # Trico truncating long 520 and 545 notes
+        if ['scopecontent', 'abstract', 'bioghist'].include?(note['type']) && text.length > 1879
+          text = text[0...1815]
+          text += " …see link to the collection guide to get full description."
+        end
         
+        # only create a tag if there is text to show (e.g., marked published or exporting unpublished)
         if text.length > 0
-          # Trico trimming newlines from notes
+          # Trico trimming newlines from notes, otherwise they do not display properly in Tripod
           text = text.gsub("\n\n", " ")
           text = text.gsub("\n", " ")
           df!(*marc_args[0...-1]).with_sfs([marc_args.last, *Array(text)])
         end
+        
       end
 
     end
