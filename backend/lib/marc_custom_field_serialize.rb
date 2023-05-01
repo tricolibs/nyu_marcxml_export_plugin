@@ -40,7 +40,7 @@ class MARCCustomFieldSerialize
     # TriCo customization to add repeating 035 fields
     extra_fields << add_aspace_system_id
     extra_fields << add_oclc_id if add_oclc_id != nil
-    extra_fields << add_test_id
+    #extra_fields << add_test_id
     extra_fields << add_909_tag
 
     # Only process the 853, 863 and 912 if the records is from tamwag, fales, nyuarchives, or Poly Archives
@@ -158,10 +158,10 @@ class MARCCustomFieldSerialize
     add_035_tag(aspace_system_id)
   end 
   # TriCo method for adding testing 035 field
-  def add_test_id
-    id = "ASpace-Test8"
-    add_035_tag(id)
-  end
+  # def add_test_id
+  #   id = "ASpace-Test8"
+  #   add_035_tag(id)
+  # end
   # modified by TriCo to allow repeatable 035 fields
   def add_035_tag(id)
     #org_code = get_repo_org_code
@@ -215,28 +215,17 @@ class MARCCustomFieldSerialize
     datafield.add_datafield_tag
   end
 
-  #TriCo changed this from 949 to 912 field and tweaked subfields, could clean this up
+  #TriCo changed this from 949 to 912 field and tweaked/deleted subfields, could clean this up
   def add_912_tag(info)
     subfields_hsh = {}
     datafield_hsh = get_datafield_hash('912','0','')
     # have to have a hash by position as the key
     # since the subfield positions matter
-    #subfields_hsh[1] = get_subfield_hash('a','NNU')
-    # I don't think that I need subfield a? LP
-    #subfields_hsh[1] = get_subfield_hash('a','HVC')
-    subfields_hsh[2] = get_subfield_hash('b', info[:building])
-    subfields_hsh[3] = get_subfield_hash('c', info[:location_code])
-    #subfields_hsh[4] = get_subfield_hash('t','4')
-    #subfields_hsh[5] = generate_subfield_j
-    subfields_hsh[6] = get_subfield_hash('m','MIXED')
-    #subfields_hsh[7] = get_subfield_hash('i','04')
-    #subfields_hsh[8] = get_location(info[:location])
-    #subfields_hsh[8] = get_subfield_hash('s','fake shelf location')
-    subfields_hsh[9] = get_subfield_hash('p',info[:barcode]) if info[:barcode]
-    subfields_hsh[10] = get_subfield_hash('w',"#{info[:type]} #{info[:indicator]}")
-    #subfields_hsh[11] = get_subfield_hash('e',info[:indicator])
-    # merge repo code hash with existing subfield code hash
-    #subfields_hsh.merge!(get_location(info[:location]))
+    subfields_hsh[1] = get_subfield_hash('b', info[:building])
+    subfields_hsh[2] = get_subfield_hash('c', info[:location_code])
+    subfields_hsh[3] = get_subfield_hash('m','MIXED')
+    subfields_hsh[4] = get_subfield_hash('p',info[:barcode]) if info[:barcode]
+    subfields_hsh[5] = get_subfield_hash('w',"#{info[:type]} #{info[:indicator]}")
     datafield = NYUCustomTag.new(datafield_hsh,subfields_hsh)
     datafield.add_datafield_tag
   end
