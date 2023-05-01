@@ -19,11 +19,10 @@ class MARCCustomFieldSerialize
   def controlfields
     cf = []
     #org_codes = %w(NNU-TL NNU-F NyNyUA NyNyUAD NyNyUCH NBPol NyBlHS NHi)
-    #org_codes = %w(LPA1 LPA2 PHC Pbm PSH PSP BMC HVC QUAKMEET)
-    org_code = get_repo_org_code
-    cf << add_001_tag if get_mms_id != nil
+    #org_code = get_repo_org_code
     # TriCo does not want the 003
     #cf << add_003_tag(org_code)
+    cf << add_001_tag if get_mms_id != nil
     cf << add_005_tag
     @record.controlfields = cf
   end
@@ -135,6 +134,7 @@ class MARCCustomFieldSerialize
     cf = NYUCustomTag.new(controlfield_hsh)
     cf.add_controlfield_tag
   end
+  # TriCo isn't currently using this
   def add_024_tag
     subfields_hsh = {}
     value = "(#{get_repo_org_code})#{check_multiple_ids}"
@@ -162,17 +162,16 @@ class MARCCustomFieldSerialize
   #   id = "ASpace-Test8"
   #   add_035_tag(id)
   # end
+
   # modified by TriCo to allow repeatable 035 fields
   def add_035_tag(id)
-    #org_code = get_repo_org_code
-    #value = "(#{get_repo_org_code})#{check_multiple_ids}-#{format_timestamp('date')}"
     subfields_hsh = {}
     datafield_hsh = get_datafield_hash('035',' ',' ')
     subfields_hsh[1] = get_subfield_hash('a',id)
     datafield = NYUCustomTag.new(datafield_hsh,subfields_hsh)
     datafield.add_datafield_tag
   end
-  # TriCo method for adding 001 field for mms_id if one already exists
+  # TriCo method for adding 001 field for mms_id if it exists
   def add_001_tag
     value = get_mms_id
     if value != nil
@@ -181,6 +180,7 @@ class MARCCustomFieldSerialize
       cf.add_controlfield_tag
     end
   end
+  # Trico isn't using this
   def add_853_tag
     subfields_hsh = {}
     datafield_hsh = get_datafield_hash('853','0','0')
@@ -191,7 +191,7 @@ class MARCCustomFieldSerialize
     datafield = NYUCustomTag.new(datafield_hsh,subfields_hsh)
     datafield.add_datafield_tag
   end
-
+  # Trico isn't using this
   def add_863_tag(info)
     subfields_hsh = {}
     datafield_hsh = get_datafield_hash('863','','')
@@ -210,12 +210,12 @@ class MARCCustomFieldSerialize
     datafield_hsh = get_datafield_hash('909','0','0')
     # have to have a hash by position as the key
     # since the subfield positions matter
-    subfields_hsh[1] = get_subfield_hash('a','This bibliographic record is part of the TriCo ASpace-Alma integration. Edits should be made to the finding aid in ASpace.')
+    subfields_hsh[1] = get_subfield_hash('a','This bibliographic record is part of the TriCo ASpace-Alma integration. Edits should be made to the collection guide in ASpace.')
     datafield = NYUCustomTag.new(datafield_hsh,subfields_hsh)
     datafield.add_datafield_tag
   end
 
-  #TriCo changed this from 949 to 912 field and tweaked/deleted subfields, could clean this up
+  #TriCo changed this from 949 to 912 field and tweaked/deleted subfields
   def add_912_tag(info)
     subfields_hsh = {}
     datafield_hsh = get_datafield_hash('912','0','')
@@ -230,6 +230,7 @@ class MARCCustomFieldSerialize
     datafield.add_datafield_tag
   end
 
+  # Trico isn't currently using this
   def get_repo_org_code
     alma_org_codes = {
       'PSC-P' => 'PSC-P', 
@@ -261,6 +262,7 @@ class MARCCustomFieldSerialize
     allowed_values
   end
 
+  # TriCo isn't using this
   def get_repo_code_values
     repo_code = nil
     repo_value = get_record_repo_value
@@ -309,6 +311,7 @@ class MARCCustomFieldSerialize
     aspace_system_id = "(TriCoArchivesSpace)" + "(#{org_code})" + id 
   end
 
+  # Trico isn't using this  
   #def process_repo_code
     #subfields = {}
     # get subfield values for repo code
@@ -343,36 +346,25 @@ class MARCCustomFieldSerialize
     get_subfield_hash('j',id)
   end
 
+  # Trico isn't using this
   def location_hsh
     {
         "Clancy Cullen [Offsite]" => "DM",
         "20 Cooper Square [Offsite Prep]" => "OK",
-        "Bobst [Offsite Prep]" => "ON",
-        "Haverford [onsite]" => { 'b' => 'hq', 'c' => 'hqmtg'},
-        "FHL [onsite]" => { 'b' => 'sf', 'c' => 'frg' },
-        "hq, htman [manuscripts: on-site]" => { 'b' => 'hq', 'c' => 'htman'},
-        "Lutnick Library, 1, Closed Stacks [Closed Stacks: 1]" => { 'b' => 'hq', 'c' => 'htman'},
-        "SCPC [off-site]" => { 'b' => 'sp', 'c'=>'poff' },
-        "FHL, multi, Record Groups [frg]" => { 'b' => 'sf', 'c' => 'frg' },
-        "br [brarc, 1st floor: RBR]" => { 'b' => 'br', 'c' => 'brarc' }
+        "Bobst [Offsite Prep]" => "ON"
     }
   end
 
+  # Trico isn't using this
   def get_location(location_info)
     subfields = {}
     loc_hsh = location_hsh
     # if location is one of the keys in location_hash,
     # output the value
     # else a blank subfield
-    location = loc_hsh.key?(location_info) ? loc_hsh[location_info] : { 'b' => 'empty location', 'c' => 'empty location'}
+    location = loc_hsh.key?(location_info) ? loc_hsh[location_info] : ''
     # creating a subfield hash
-    # get_subfield_hash('s',location)
-    subfields[2] = get_subfield_hash('b', location['b'])
-    subfields[3] = get_subfield_hash('c', location['c'])
-    #subfields[2] = get_subfield_hash('b', 'hq')
-    #subfields[3] = get_subfield_hash('c', 'hqmtg')
-
-    subfields
+    get_subfield_hash('s',location)
   end
 
   def format_timestamp(type = 'timestamp')
