@@ -608,9 +608,12 @@ class MARCModel < ASpaceExport::ExportModel
         text += ASpaceExport::Utils.extract_note_text(note, @include_unpublished, true)
 
         # Trico truncating long 520 and 545 notes
-        if ['scopecontent', 'abstract', 'bioghist'].include?(note['type']) && text.length > 1879
-          text = text[0...1815]
-          text += " …see link to the collection guide to get full description."
+        text_limit = 2000
+        if ['scopecontent', 'abstract', 'bioghist'].include?(note['type']) && text.length > text_limit
+          addendum = " …see link to the collection guide to get full description."
+          text_limit -= addendum.length
+          text = text[0...text_limit]
+          text += addendum
         end
         
         # only create a tag if there is text to show (e.g., marked published or exporting unpublished)
