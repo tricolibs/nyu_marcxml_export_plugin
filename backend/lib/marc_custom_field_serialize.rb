@@ -39,6 +39,7 @@ class MARCCustomFieldSerialize
     # TriCo customization to add repeating 035 fields
     extra_fields << add_aspace_system_id
     extra_fields << add_oclc_id if add_oclc_id != nil
+    extra_fields << add_uri
     #extra_fields << add_test_id
     extra_fields << add_909_tag
 
@@ -151,6 +152,11 @@ class MARCCustomFieldSerialize
     if oclc_id != nil
       add_035_tag(oclc_id)
     end
+  end
+  # TriCo method for adding URI 035 field
+  def add_uri 
+    uri = get_uri
+    add_035_tag(uri)
   end
   # TriCo method for adding ASpace System ID 035 field
   def add_aspace_system_id 
@@ -303,6 +309,10 @@ class MARCCustomFieldSerialize
       end
     end
     oclc_id
+  end
+  #TriCo method for getting URI
+  def get_uri
+    uri = "(TriCoArchivesSpace)(URI)" + @record.aspace_record['uri']
   end
   #TriCo method for getting ASpace system id
   def get_aspace_system_id 
