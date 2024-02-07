@@ -1,3 +1,4 @@
+# coding: utf-8
 class MARCModel < ASpaceExport::ExportModel
   model_for :marc21
 
@@ -22,7 +23,7 @@ class MARCModel < ASpaceExport::ExportModel
   @resource_map = {
     [:id_0, :id_1, :id_2, :id_3] => :handle_id,
     # TriCo does not want to put the ead url in the 856
-    #[:ead_location] => :handle_ead_loc,
+    #[:ead_location, :publish, :uri, :slug] => :handle_ead_loc,
     [:ark_name] => :handle_ark,
     :notes => :handle_notes,
     :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e')
@@ -236,14 +237,13 @@ class MARCModel < ASpaceExport::ExportModel
 
     # ANW-697: Language Text subrecords should be exported in the MARC 546 subfield $a
 
-    language_notes = lang_materials.map {|l| l['notes']}.compact.reject {|e|  e == [] }
+    language_notes = lang_materials.map {|l| l['notes']}.compact.reject {|e| e == [] }
 
     if language_notes
       language_notes.each do |note|
         handle_notes(note)
       end
     end
-
   end
 
   ## handle_dates method removed all functionality moved to handle_title
@@ -377,7 +377,7 @@ class MARCModel < ASpaceExport::ExportModel
 
 
   def handle_primary_creator(linked_agents)
-    link = linked_agents.find{|a| a['role'] == 'creator'}
+    link = linked_agents.find {|a| a['role'] == 'creator'}
     return nil unless link
     return nil unless link["_resolved"]["publish"] || @include_unpublished
 
@@ -411,7 +411,6 @@ class MARCModel < ASpaceExport::ExportModel
       ind1  = name['name_order'] == 'direct' ? '0' : '1'
       code = '100'
       sfs = gather_agent_person_subfield_mappings(name, relator_sfs, creator)
-    
 
     when 'agent_family'
       code = '100'
@@ -476,15 +475,12 @@ class MARCModel < ASpaceExport::ExportModel
       df(code, ind1, ind2, i).with_sfs(*sfs)
     end
   end
-
  
 
   def handle_agents(linked_agents)
     handle_primary_creator(linked_agents)
     handle_other_creators(linked_agents)
-
     
-
     subjects = linked_agents.select {|a| a['role'] == 'subject'}
 
     subjects.each_with_index do |link, i|
@@ -541,7 +537,37 @@ class MARCModel < ASpaceExport::ExportModel
       df(code, ind1, ind2, i).with_sfs(*sfs)
     end
   end
+
+
+  def handle_relators(relator_sfs, link)
+    relator = I18n.t("enumerations.linked_agent_archival_record_relators.#{link}")
+    relator_sfs << ['4', link]
+    unless relator.to_s.include?('translation missing')
+      relator_sfs << ['e', relator]
+    end
+
+    return relator_sfs
+  end
   
+
+  def handle_agent_terms(terms)
+    sfs = []
+    terms.each do |t|
+      tag = case t['term_type']
+            when 'uniform_title'; 't'
+            when 'genre_form', 'style_period'; 'v'
+            when 'topical', 'cultural_context'; 'x'
+            when 'temporal'; 'y'
+            when 'geographic'; 'z'
+            end
+      next if tag.nil?
+      sfs << [(tag), t['term']]
+    end
+
+    sfs
+  end
+
+
   ## plugin -- nyu local handle_notes method def
   def handle_notes(notes)
     handle_scopecontent(notes)
@@ -667,20 +693,54 @@ class MARCModel < ASpaceExport::ExportModel
   end
 
 
-  # 3/28/18: Updated: ANW-318
-  def handle_ead_loc(ead_loc)
-    ## plugin add 555 with ead location.
-    df('555', ' ', ' ').with_sfs(
-      ['a', "Finding aid online:"],
-      ['u', ead_loc]
-    )
-    df('856', '4', '2').with_sfs(
-      ['y', "Finding aid online"],
-      ['u', ead_loc]
-    )
+  # 4/7/22: Updated: ANW-1071
+  def handle_ead_loc(ead_loc, publish, uri, slug)
+    # If there is EADlocation
+    #<datafield tag="856" ind1="4" ind2="2">
+    #  <subfield code="z">Finding aid online:</subfield>
+    #  <subfield code="u">EADlocation</subfield>
+    #</datafield>
+    # if config option is set, output a second 856 with slugged (or not) PUI URL as long as it's not the same as the EADLocation
+
+    #<datafield tag="856" ind1="4" ind2="2">
+    #  <subfield code="z">Finding aid online:</subfield>
+    #  <subfield code="u">slugged URL</subfield>
+    #</datafield>
+
+    if ead_loc && !ead_loc.empty?
+      df('856', '4', '2').with_sfs(
+                                    ['z', "Finding aid online:"],
+                                    ['u', ead_loc]
+                                  )
+    end
+
+    if AppConfig[:enable_public] && AppConfig[:include_pui_finding_aid_urls_in_marc_exports] && publish
+
+      if AppConfig[:use_human_readable_urls] &&
+         AppConfig[:use_slug_finding_aid_urls_in_marc_exports]
+
+        rec_type = uri.split('/')[3]
+        link = AppConfig[:public_proxy_url] + "/#{rec_type}/#{slug}"
+      else
+        link = AppConfig[:public_proxy_url] + uri
+      end
+
+      unless link == ead_loc
+        df!('856', '4', '2').with_sfs(
+                                  ['z', "Finding aid 
+                                  online:"],
+                                  ['u', link]
+                                )
+      end
+    end
   end
-# updated this to work with ArchivesSpace v3.2.0
+   
+
+  # TriCo added x subfield  
   def handle_ark(ark_name)
+    return if ark_name.nil?
+    return unless [:arks_enabled]
+
     # If ARKs are enabled, add an 856
     #<datafield tag="856" ind1="4" ind2="2">
     #  <subfield code="z">Archival Resource Key:</subfield>
@@ -749,6 +809,7 @@ class MARCModel < ASpaceExport::ExportModel
 
     return value_found
   end
+  
 
   # name fields looks something this:
   # [["a", "Dick, Philp K."], ["b", nil], ["c", "see"], ["d", "10-1-1980"], ["g", nil], ["q", nil], ["4", "aut"]]
@@ -780,18 +841,18 @@ class MARCModel < ASpaceExport::ExportModel
 
     return name_fields
   end
+
   
   def gather_agent_person_subfield_mappings(name, role_info, agent, terms=nil)
     joint = name['name_order'] == 'direct' ? ' ' : ', '
     name_parts = [name['primary_name'], name['rest_of_name']].reject {|i| i.nil? || i.empty?}.join(joint)
+
     subfield_e, subfield_4 = prepare_role_subfields(role_info)
-    
     number      = name['number'] rescue nil
     extras      = %w(prefix title suffix).map {|prt| name[prt]}.compact.join(', ') rescue nil
     dates       = name['dates'] rescue nil
     qualifier   = name['qualifier'] rescue nil
     fuller_form = name['fuller_form'] rescue nil
-    
 
     name_fields = [
       ["a", name_parts],
