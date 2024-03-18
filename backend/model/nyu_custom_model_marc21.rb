@@ -108,6 +108,7 @@ class MARCModel < ASpaceExport::ExportModel
   def self.from_resource(obj, opts = {})
     marc = self.from_archival_object(obj, opts)
     marc.apply_map(obj, @resource_map)
+    # TriCo changed leader
     marc.leader_string = "00000np$aa2200000uu 4500"
     marc.leader_string[7] = obj.level == 'item' ? 'm' : 'c'
 
@@ -136,7 +137,7 @@ class MARCModel < ASpaceExport::ExportModel
     lang_materials = obj.lang_materials
     languages = lang_materials.map {|l| l['language_and_script']}.compact
     langcode = languages.count == 1 ? languages[0]['language'] : 'mul'
-
+    # TriCo added
     (23-(string.length)).times { string += ' ' }
     string += '|'
     # variable number of spaces needed since country code could have 2 or 3 chars
@@ -221,10 +222,9 @@ class MARCModel < ASpaceExport::ExportModel
 
 
   def handle_languages(lang_materials)
-
     # ANW-697: The Language subrecord code values should be exported in repeating subfield $a entries in the MARC 041 field.
 
-    languages = lang_materials.map{|l| l['language_and_script']}.compact
+    languages = lang_materials.map {|l| l['language_and_script']}.compact
 
     languages.each do |language|
       ##v2.7.0 plugin add 0 to indc1
@@ -349,12 +349,6 @@ class MARCModel < ASpaceExport::ExportModel
       #TriCo adding punctuation
       sfs = apply_terminal_punctuation_subjects(sfs)
 
-      # code borrowed from Yale to export subject authority id
-      unless subject['authority_id'].nil?
-        sfs << ['0', subject['authority_id']]
-      end
-
-
       # N.B. ind2 is an array at this point.
       if ind2[0] == '7'
         sfs << ['2', subject['source']]
@@ -367,6 +361,8 @@ class MARCModel < ASpaceExport::ExportModel
       else
         ind2 = ind2[0]
       end
+      
+      sfs << ['0', subject['authority_id']]
 
       df!(code, ind1, ind2).with_sfs(*sfs)
     end
