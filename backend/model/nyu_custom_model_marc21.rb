@@ -642,9 +642,22 @@ class MARCModel < ASpaceExport::ExportModel
           text = text.gsub("\n", " ")
           df!(*marc_args[0...-1]).with_sfs([marc_args.last, *Array(text)])
         end
-        
       end
 
+      # ANW-1350: Export bibliography notes to 581
+      # Bibliography notes have a different structure than the notes handled above, so they are processed separately
+
+      # if note['jsonmodel_type'] == "note_bibliography"
+      #   if note['publish'] || @include_unpublished
+      #     note['content'].each do |c|
+      #       df!('581', ' ', ' ').with_sfs(['a', c])
+      #     end
+
+      #     note['items'].each do |i|
+      #       df!('581', ' ', ' ').with_sfs(['a', i])
+      #     end
+      #   end
+      # end
     end
   end
 
