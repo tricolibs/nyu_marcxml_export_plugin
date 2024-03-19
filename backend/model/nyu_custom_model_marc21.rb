@@ -274,10 +274,12 @@ class MARCModel < ASpaceExport::ExportModel
     # plugin -- Removing 852
     # df('852', ' ', ' ').with_sfs(*subfields_852)
 
-    df('040', ' ', ' ').with_sfs(['a', repo['org_code']], ['b', finding_aid_language[0]],['c', repo['org_code']])
+    df('040', ' ', ' ').with_sfs(['a', repo['org_code']], ['b', finding_aid_language[0]], ['c', repo['org_code']])
 
     # plugin -- Removing 049 field
-    # df('049', ' ', ' ').with_sfs(['a', repo['org_code']])
+    # if repo['org_code']
+    #   df('049', ' ', ' ').with_sfs(['a', repo['org_code']])
+    # end
 
     # plugin -- disabling 044 field
     #if repo.has_key?('country') && !repo['country'].empty?
@@ -643,7 +645,7 @@ class MARCModel < ASpaceExport::ExportModel
           df!(*marc_args[0...-1]).with_sfs([marc_args.last, *Array(text)])
         end
       end
-
+      # TriCo isn't exporting the 581
       # ANW-1350: Export bibliography notes to 581
       # Bibliography notes have a different structure than the notes handled above, so they are processed separately
 
@@ -697,7 +699,6 @@ class MARCModel < ASpaceExport::ExportModel
       df!('300').with_sfs(['a', e], ['f', t])
     end
   end
-
 
   # 4/7/22: Updated: ANW-1071
   def handle_ead_loc(ead_loc, publish, uri, slug)
@@ -770,6 +771,7 @@ class MARCModel < ASpaceExport::ExportModel
     # as long as it is not $0, $2, or $4 which don't receive
     # terminal punctuation.
     sub_store = name_fields.reject! {|x| [0, 2, 4].include?(x[0][0]) }
+    # TriCo added some punctuation
     unless ['.', ')', ',', '-'].include?(name_fields[-1][1][-1])
       name_fields[-1][1] << "."
     end
@@ -848,7 +850,18 @@ class MARCModel < ASpaceExport::ExportModel
     return name_fields
   end
 
+  def get_primary_agent_record_identifier(agent)
+    # ANW-1414: add primary agent_record_identifier if present
+    primary_identifier_record = agent['agent_record_identifiers'].first {|ari| ari['primary_identifier'] == true }
+
+    if primary_identifier_record
+      return primary_identifier_record['record_identifier']
+    else
+      return nil
+    end
+  end
   
+
   def gather_agent_person_subfield_mappings(name, role_info, agent, terms=nil)
     joint = name['name_order'] == 'direct' ? ' ' : ', '
     name_parts = [name['primary_name'], name['rest_of_name']].reject {|i| i.nil? || i.empty?}.join(joint)
@@ -859,7 +872,9 @@ class MARCModel < ASpaceExport::ExportModel
     dates       = name['dates'] rescue nil
     qualifier   = name['qualifier'] rescue nil
     fuller_form = name['fuller_form'] rescue nil
-
+    primary_identifier = get_primary_agent_record_identifier(agent)
+    
+    # TriCo changed order
     name_fields = [
       ["a", name_parts],
       ["b", number],
@@ -867,7 +882,8 @@ class MARCModel < ASpaceExport::ExportModel
       ["q", fuller_form],
       ["d", dates],
       subfield_e,
-      ["g", qualifier]
+      ["g", qualifier],
+      ["0", primary_identifier],
     ].compact.reject {|a| a[1].nil? || a[1].empty?}
 
     unless terms.nil?
@@ -930,12 +946,14 @@ class MARCModel < ASpaceExport::ExportModel
     family_name = name['family_name'] rescue nil
     qualifier   = name['qualifier'] rescue nil
     dates       = name['dates'] rescue nil
+    primary_identifier = get_primary_agent_record_identifier(agent)
 
     name_fields = [
       ['a', family_name],
       ['d', dates],
       ['c', qualifier],
       subfield_e,
+      ["0", primary_identifier],
     ].compact.reject {|a| a[1].nil? || a[1].empty?}
 
     unless terms.nil?
@@ -956,7 +974,7 @@ class MARCModel < ASpaceExport::ExportModel
   # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
   # TriCo changed some of this to accomodate n, d, and c subfields
   def handle_agent_corporate_punctuation(name_fields)
-
+    # name_fields.sort! {|a, b| a[0][0] <=> b[0][0]}
     # The value of subfield g must be enclosed in parentheses.
     g_index = name_fields.find_index {|a| a[0] == "g"}
     unless !g_index
@@ -1174,6 +1192,8 @@ class MARCModel < ASpaceExport::ExportModel
       subfield_b_1 = sub_name1
       subfield_b_2 = sub_name2
     end
+    
+    primary_identifier = get_primary_agent_record_identifier(agent) || find_authority_id(agent['names'])
 
     name_fields = [
       ['a', primary_name],
@@ -1204,11 +1224,9 @@ class MARCModel < ASpaceExport::ExportModel
     end
 
     name_fields = handle_agent_corporate_punctuation(name_fields)
+    
+    name_fields.push(['0', primary_identifier]) unless primary_identifier.nil?
     name_fields.push(subfield_4) unless subfield_4.nil?
-
-    authority_id = find_authority_id(agent['names'])
-    subfield_0 = authority_id ? [0, authority_id] : nil
-    name_fields.push(subfield_0) unless subfield_0.nil?
 
     return name_fields
   end
@@ -1252,10 +1270,10 @@ class MARCModel < ASpaceExport::ExportModel
 
     name_fields = handle_agent_meeting_punctuation(name_fields)
     name_fields.push(subfield_4) unless subfield_e.nil?
+    
+    primary_identifier = get_primary_agent_record_identifier(agent) || find_authority_id(agent['names'])
 
-    authority_id = find_authority_id(agent['names'])
-    subfield_0 = authority_id ? [0, authority_id] : nil
-    name_fields.push(subfield_0) unless subfield_0.nil?
+    name_fields.push(['0', primary_identifier]) unless primary_identifier.nil?
 
     return name_fields
   end
