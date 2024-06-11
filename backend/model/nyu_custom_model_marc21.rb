@@ -258,17 +258,17 @@ class MARCModel < ASpaceExport::ExportModel
 
     if repo['parent_institution_name']
       subfields_852 = [
-        ['a', repo['parent_institution_name']],
-        ['b', repo['name']]
-      ]
+                        ['a', repo['parent_institution_name']],
+                        ['b', repo['name']]
+                      ]
     elsif repo['org_code']
       subfields_852 = [
-        ['a', repo['org_code']],
-      ]
+                        ['a', repo['org_code']],
+                      ]
     else
       subfields_852 = [
-        ['a', repo['name']]
-      ]
+                        ['a', repo['name']]
+                      ]
     end
 
     # plugin -- Removing 852
@@ -280,19 +280,6 @@ class MARCModel < ASpaceExport::ExportModel
     # if repo['org_code']
     #   df('049', ' ', ' ').with_sfs(['a', repo['org_code']])
     # end
-
-    # plugin -- disabling 044 field
-    #if repo.has_key?('country') && !repo['country'].empty?
-    #
-    #  # US is a special case, because ASpace has no knowledge of states, the
-    #  # correct value is 'xxu'
-    #  if repo['country'] == "US"
-    #   df('044', ' ', ' ').with_sfs(['a', "xxu"])
-    #  else
-    #   df('044', ' ', ' ').with_sfs(['a', repo['country'].downcase])
-    #  end
-    #end
-
   end
 
   def source_to_code(source)
@@ -319,22 +306,21 @@ class MARCModel < ASpaceExport::ExportModel
                          first_indicator = hsh[value] if articles.include?(value)
                        end
                        ['630', first_indicator, source_to_code(subject['source'])]
-                     when 'temporal'
-                       ['648', source_to_code(subject['source'])]
-                     when 'topical'
-                       ['650', source_to_code(subject['source'])]
-                     when 'geographic', 'cultural_context'
-                       ['651', source_to_code(subject['source'])]
-                     when 'genre_form', 'style_period'
-                       ['655', source_to_code(subject['source'])]
-                     when 'occupation'
-                       ['656', '7']
-                     when 'function'
-                       ['656', '7']
-                     else
-                       ['650', source_to_code(subject['source'])]
-                     end
-
+                    when 'temporal'
+                      ['648', source_to_code(subject['source'])]
+                    when 'topical'
+                      ['650', source_to_code(subject['source'])]
+                    when 'geographic', 'cultural_context'
+                      ['651', source_to_code(subject['source'])]
+                    when 'genre_form', 'style_period'
+                      ['655', source_to_code(subject['source'])]
+                    when 'occupation'
+                      ['656', '7']
+                    when 'function'
+                      ['656', '7']
+                    else
+                      ['650', source_to_code(subject['source'])]
+                    end
       sfs = [['a', term['term']]]
 
       terms.each do |t|
