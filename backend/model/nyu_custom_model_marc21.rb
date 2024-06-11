@@ -484,7 +484,7 @@ class MARCModel < ASpaceExport::ExportModel
   def handle_agents(linked_agents)
     handle_primary_creator(linked_agents)
     handle_other_creators(linked_agents)
-    
+
     subjects = linked_agents.select {|a| a['role'] == 'subject'}
 
     subjects.each_with_index do |link, i|
@@ -501,7 +501,7 @@ class MARCModel < ASpaceExport::ExportModel
       end
 
       case subject['agent_type']
-      
+
       when 'agent_corporate_entity'
         #TriCo addition of 611
         if subject['names'][0]['conference_meeting'] == true
@@ -552,7 +552,6 @@ class MARCModel < ASpaceExport::ExportModel
 
     return relator_sfs
   end
-  
 
   def handle_agent_terms(terms)
     sfs = []
@@ -698,7 +697,7 @@ class MARCModel < ASpaceExport::ExportModel
   def handle_extents(extents)
     extents.each do |ext|
       e = ext['number']
-      t =  "#{I18n.t('enumerations.extent_extent_type.'+ext['extent_type'], :default => ext['extent_type'])}"
+      t = "#{I18n.t('enumerations.extent_extent_type.'+ext['extent_type'], :default => ext['extent_type'])}"
     
       # TriCo does not currently want to display the container summary because of bad data
       #if ext['container_summary']
@@ -709,6 +708,7 @@ class MARCModel < ASpaceExport::ExportModel
     end
   end
 
+  # 3/28/18: Updated: ANW-318
   # 4/7/22: Updated: ANW-1071
   def handle_ead_loc(ead_loc, publish, uri, slug)
     # If there is EADlocation
@@ -743,14 +743,12 @@ class MARCModel < ASpaceExport::ExportModel
 
       unless link == ead_loc
         df!('856', '4', '2').with_sfs(
-                                  ['z', "Finding aid 
-                                  online:"],
+                                  ['z', "Finding aid online:"],
                                   ['u', link]
                                 )
       end
     end
   end
-   
 
   # TriCo added x subfield  
   def handle_ark(ark_name)
@@ -826,7 +824,7 @@ class MARCModel < ASpaceExport::ExportModel
 
     return value_found
   end
-  
+
 
   # name fields looks something this:
   # [["a", "Dick, Philp K."], ["b", nil], ["c", "see"], ["d", "10-1-1980"], ["g", nil], ["q", nil], ["4", "aut"]]
@@ -869,7 +867,7 @@ class MARCModel < ASpaceExport::ExportModel
       return nil
     end
   end
-  
+
 
   def gather_agent_person_subfield_mappings(name, role_info, agent, terms=nil)
     joint = name['name_order'] == 'direct' ? ' ' : ', '
@@ -885,15 +883,15 @@ class MARCModel < ASpaceExport::ExportModel
     
     # TriCo changed order
     name_fields = [
-      ["a", name_parts],
-      ["b", number],
-      ["c", extras],
-      ["q", fuller_form],
-      ["d", dates],
-      subfield_e,
-      ["g", qualifier],
-      ["0", primary_identifier],
-    ].compact.reject {|a| a[1].nil? || a[1].empty?}
+                   ["a", name_parts],
+                   ["b", number],
+                   ["c", extras],
+                   ["q", fuller_form],
+                   ["d", dates],
+                   subfield_e,
+                   ["g", qualifier],
+                   ["0", primary_identifier],
+                  ].compact.reject {|a| a[1].nil? || a[1].empty?}
 
     unless terms.nil?
       name_fields.concat handle_agent_terms(terms)
@@ -958,12 +956,12 @@ class MARCModel < ASpaceExport::ExportModel
     primary_identifier = get_primary_agent_record_identifier(agent)
 
     name_fields = [
-      ['a', family_name],
-      ['d', dates],
-      ['c', qualifier],
-      subfield_e,
-      ["0", primary_identifier],
-    ].compact.reject {|a| a[1].nil? || a[1].empty?}
+                    ['a', family_name],
+                    ['d', dates],
+                    ['c', qualifier],
+                    subfield_e,
+                    ["0", primary_identifier],
+                  ].compact.reject {|a| a[1].nil? || a[1].empty?}
 
     unless terms.nil?
       name_fields.concat handle_agent_terms(terms)
@@ -979,9 +977,9 @@ class MARCModel < ASpaceExport::ExportModel
     return name_fields
   end
 
-  #For corporation types
-  # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
-  # TriCo changed some of this to accomodate n, d, and c subfields
+    #For corporation types
+    # TODO: DRY this up eventually. Leaving it as it is for now in case the logic changes.
+    # TriCo changed some of this to accomodate n, d, and c subfields
   def handle_agent_corporate_punctuation(name_fields)
     # name_fields.sort! {|a, b| a[0][0] <=> b[0][0]}
     # The value of subfield g must be enclosed in parentheses.
@@ -1233,13 +1231,13 @@ class MARCModel < ASpaceExport::ExportModel
     end
 
     name_fields = handle_agent_corporate_punctuation(name_fields)
-    
+
     name_fields.push(['0', primary_identifier]) unless primary_identifier.nil?
     name_fields.push(subfield_4) unless subfield_4.nil?
 
     return name_fields
   end
-  
+
   # TriCo method for creating 611s and 711s, basically copied from 610 with additional fields
   def gather_agent_meeting_subfield_mappings(name, role_info, agent, terms=nil)
     subfield_e, subfield_4 = prepare_role_subfields(role_info)
