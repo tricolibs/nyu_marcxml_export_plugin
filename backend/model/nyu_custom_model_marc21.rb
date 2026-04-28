@@ -698,13 +698,15 @@ class MARCModel < ASpaceExport::ExportModel
     extents.each do |ext|
       e = ext['number']
       t = "#{I18n.t('enumerations.extent_extent_type.'+ext['extent_type'], :default => ext['extent_type'])}"
+      d = ext['dimensions']
+      p = ext['physical_details']
     
       # TriCo does not currently want to display the container summary because of bad data
       #if ext['container_summary']
         #t << " (#{ext['container_summary']})"
       #end
 
-      df!('300').with_sfs(['a', e], ['f', t])
+      df!('300').with_sfs(['a', e], ['f', t], ['c', d], ['b', p])
     end
   end
 
